@@ -1,10 +1,16 @@
 import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { GraphCanvasComponent } from './graph-canvas/graph-canvas.component';
 
 @Component({
   selector: 'app-root',
-  imports: [],
+  standalone: true,
+  imports: [
+    CommonModule,
+    GraphCanvasComponent
+  ],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  styleUrls: ['./app.component.scss']
 })
 export class AppComponent {
   title = 'mapas-conocimiento';
