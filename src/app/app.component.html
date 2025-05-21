@@ -1,2 +1,27 @@
 <h1>Mapas de Conocimiento</h1>
-<app-graph-canvas></app-graph-canvas>
+
+<div class="main-layout">
+  <div class="canvas-area">
+    <div class="controls">
+      <button (click)="onAddConcept()">Añadir Concepto</button>
+      <button (click)="onAddRelation()" [disabled]="!graphCanvas || !(graphCanvas.selectedElementId && graphCanvas.selectedElementType === 'node')">Añadir Relación desde Seleccionado</button>
+      <button (click)="onAddRelationAny()">Añadir Relación (IDs)</button>
+      <!-- El botón de renombrar se puede quitar si el panel es la única vía -->
+      <!-- <button (click)="onRenameSelected()" [disabled]="!graphCanvas || !graphCanvas.selectedElementId">Renombrar Seleccionado</button> -->
+      <button (click)="onDeleteSelected()" [disabled]="!graphCanvas || !graphCanvas.selectedElementId">Eliminar Seleccionado</button>
+      
+      <div *ngIf="graphCanvas && graphCanvas.selectedElementId" class="selected-info-inline">
+        Seleccionado: {{ graphCanvas.selectedElementId }} ({{ graphCanvas.selectedElementType }})
+      </div>
+    </div>
+    
+    <app-graph-canvas #graphCanvasComponent></app-graph-canvas>
+  </div>
+
+  <div class="sidebar-area">
+    <app-properties-panel
+      [elementId]="graphCanvas?.selectedElementId ?? null"
+      [elementType]="graphCanvas?.selectedElementType ?? null">
+    </app-properties-panel>
+  </div>
+</div>

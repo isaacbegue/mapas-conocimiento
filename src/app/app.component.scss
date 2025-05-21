@@ -1,0 +1,68 @@
+.controls {
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+
+  button {
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding: 0.5em 1em;
+    border: 1px solid #ccc;
+    background-color: #e7e7e7;
+    cursor: pointer;
+    border-radius: 3px;
+
+    &:hover {
+      background-color: #d7d7d7;
+    }
+
+    &:disabled {
+      background-color: #f5f5f5;
+      color: #aaa;
+      cursor: not-allowed;
+      border-color: #e0e0e0;
+    }
+  }
+
+  .selected-info-inline { // Renombrado para distinguirlo del panel completo
+    display: inline-block;
+    margin-left: 1rem;
+    font-style: italic;
+    color: #333;
+    font-size: 0.9em;
+    padding: 0.5em;
+    background-color: #e9efff;
+    border: 1px solid #c3d5ff;
+    border-radius: 3px;
+  }
+}
+
+// Nuevo layout para canvas y sidebar
+.main-layout {
+  display: flex;
+  gap: 20px; // Espacio entre el canvas y el sidebar
+
+  .canvas-area {
+    flex-grow: 1; // El área del canvas toma el espacio disponible
+    // Podrías añadir un min-width si es necesario
+  }
+
+  .sidebar-area {
+    flex-shrink: 0; // Evita que el sidebar se encoja
+    width: 300px; // Ancho fijo para el sidebar, ajústalo como prefieras
+    // Podrías añadir un max-width si es necesario
+  }
+}
+
+// Media query para apilar en pantallas pequeñas (opcional pero recomendado)
+@media (max-width: 768px) {
+  .main-layout {
+    flex-direction: column;
+
+    .sidebar-area {
+      width: 100%; // El sidebar ocupa todo el ancho en móviles
+      margin-top: 20px;
+    }
+  }
+}

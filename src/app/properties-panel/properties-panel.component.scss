@@ -1,0 +1,68 @@
+.properties-panel-container {
+  border: 1px solid #ccc;
+  padding: 15px;
+  margin-top: 10px;
+  background-color: #f9f9f9;
+  border-radius: 5px;
+  min-width: 250px; // O el ancho que prefieras
+
+  h3 {
+    margin-top: 0;
+    color: #333;
+  }
+
+  p {
+    font-size: 0.9em;
+    color: #555;
+    strong {
+      color: #333;
+    }
+  }
+
+  label {
+    display: block;
+    margin-top: 10px;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 0.9em;
+  }
+
+  input[type="text"] {
+    width: calc(100% - 12px); // Considera padding y borde
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+
+  .actions {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px; // Espacio entre botones
+
+    button {
+      padding: 8px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9em;
+
+      &.cancel-button {
+        background-color: #f44336; // Rojo
+        color: white;
+        &:hover {
+          background-color: #d32f2f;
+        }
+      }
+
+      &:not(.cancel-button) {
+        background-color: #4CAF50; // Verde
+        color: white;
+        &:hover {
+          background-color: #45a049;
+        }
+      }
+    }
+  }
+}

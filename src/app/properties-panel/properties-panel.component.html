@@ -1,0 +1,25 @@
+<div class="properties-panel-container" *ngIf="elementId && selectedElementData">
+  <h3>Propiedades del Elemento</h3>
+  <p><strong>ID:</strong> {{ selectedElementData.id }}</p>
+  <p><strong>Tipo:</strong> {{ elementType === 'node' ? 'Concepto/Nodo' : 'Relación/Arista' }}</p>
+
+  <div *ngIf="elementType === 'node'">
+    <label for="nodeName">Nombre:</label>
+    <input type="text" id="nodeName" [(ngModel)]="editableName" (keyup.enter)="onSaveChanges()">
+  </div>
+
+  <div *ngIf="elementType === 'edge'">
+    <label for="edgeLabel">Etiqueta:</label>
+    <input type="text" id="edgeLabel" [(ngModel)]="editableLabel" (keyup.enter)="onSaveChanges()">
+  </div>
+
+  <div class="actions" *ngIf="selectedElementData">
+    <button (click)="onSaveChanges()">Guardar Cambios</button>
+    <button (click)="onCancel()" class="cancel-button">Cancelar</button>
+  </div>
+
+</div>
+
+<div class="properties-panel-container" *ngIf="!elementId">
+  <p>Selecciona un elemento en el grafo para ver sus propiedades.</p>
+</div>
