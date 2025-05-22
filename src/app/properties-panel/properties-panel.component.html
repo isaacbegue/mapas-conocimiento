@@ -4,13 +4,73 @@
   <p><strong>Tipo:</strong> {{ elementType === 'node' ? 'Concepto/Nodo' : 'Relación/Arista' }}</p>
 
   <div *ngIf="elementType === 'node'">
-    <label for="nodeName">Nombre:</label>
-    <input type="text" id="nodeName" [(ngModel)]="editableName" (keyup.enter)="onSaveChanges()">
+    <div>
+      <label for="nodeName">Nombre:</label>
+      <input type="text" id="nodeName" [(ngModel)]="editableName">
+    </div>
+    <div>
+      <label for="nodeBgColor">Color de Fondo:</label>
+      <input type="color" id="nodeBgColor" [(ngModel)]="editableNodeBackgroundColor">
+    </div>
+    <div>
+      <label for="nodeShape">Forma:</label>
+      <select id="nodeShape" [(ngModel)]="editableNodeShape">
+        <option *ngFor="let shape of nodeShapes" [value]="shape">{{shape}}</option>
+      </select>
+    </div>
+    <div>
+      <label for="nodeBorderColor">Color de Borde:</label>
+      <input type="color" id="nodeBorderColor" [(ngModel)]="editableNodeBorderColor">
+    </div>
+    <div>
+      <label for="nodeBorderWidth">Ancho de Borde:</label>
+      <input type="number" id="nodeBorderWidth" [(ngModel)]="editableNodeBorderWidth" min="0">
+    </div>
+    <div>
+      <label for="nodeWidth">Ancho:</label>
+      <input type="text" id="nodeWidth" [(ngModel)]="editableNodeWidth" placeholder="e.g., label or 50">
+    </div>
+    <div>
+      <label for="nodeHeight">Alto:</label>
+      <input type="text" id="nodeHeight" [(ngModel)]="editableNodeHeight" placeholder="e.g., label or 50">
+    </div>
+    <div>
+      <label for="nodePadding">Padding:</label>
+      <input type="text" id="nodePadding" [(ngModel)]="editableNodePadding" placeholder="e.g., 10px">
+    </div>
+    <div *ngIf="isParentNode" class="form-group propagation-control" style="margin-top: 10px; padding: 5px; border: 1px solid #eee;">
+      <label for="propagateToChildrenCheckbox" style="display: flex; align-items: center; cursor: pointer;">
+        <input type="checkbox" id="propagateToChildrenCheckbox" [(ngModel)]="propagateToChildren" style="margin-right: 5px;">
+        Aplicar cambios de estilo a todos los hijos
+      </label>
+    </div>
   </div>
 
   <div *ngIf="elementType === 'edge'">
-    <label for="edgeLabel">Etiqueta:</label>
-    <input type="text" id="edgeLabel" [(ngModel)]="editableLabel" (keyup.enter)="onSaveChanges()">
+    <div>
+      <label for="edgeLabel">Etiqueta:</label>
+      <input type="text" id="edgeLabel" [(ngModel)]="editableLabel">
+    </div>
+    <div>
+      <label for="edgeLineColor">Color de Línea:</label>
+      <input type="color" id="edgeLineColor" [(ngModel)]="editableEdgeLineColor">
+    </div>
+    <div>
+      <label for="edgeArrowShape">Forma de Flecha:</label>
+      <select id="edgeArrowShape" [(ngModel)]="editableEdgeArrowShape">
+        <option *ngFor="let shape of edgeArrowShapes" [value]="shape">{{shape}}</option>
+      </select>
+    </div>
+    <div>
+      <label for="edgeWidth">Ancho de Línea:</label>
+      <input type="number" id="edgeWidth" [(ngModel)]="editableEdgeWidth" min="1">
+    </div>
+    <div>
+      <label for="edgeCurveStyle">Estilo de Curva:</label>
+      <select id="edgeCurveStyle" [(ngModel)]="editableEdgeCurveStyle">
+        <option *ngFor="let style of curveStyles" [value]="style">{{style}}</option>
+      </select>
+    </div>
   </div>
 
   <div class="actions" *ngIf="selectedElementData">

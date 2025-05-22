@@ -25,16 +25,25 @@
     margin-bottom: 5px;
     font-weight: bold;
     font-size: 0.9em;
+    // display: block; // Already effectively block due to other styles or context
   }
 
-  input[type="text"] {
-    width: calc(100% - 12px); // Considera padding y borde
+  input[type="text"],
+  input[type="number"],
+  input[type="color"],
+  select {
+    width: 100%; // Make form elements take full width of their container
     padding: 8px;
-    margin-bottom: 10px;
+    margin-bottom: 10px; // Keep consistent margin
     border: 1px solid #ddd;
     border-radius: 4px;
-    box-sizing: border-box;
+    box-sizing: border-box; // Important for width: 100% and padding
   }
+
+  // Specific adjustments if needed, e.g., for color inputs if they behave oddly with width: 100%
+  // input[type="color"] {
+  //   min-height: 38px; // Example: ensure color input height matches text inputs
+  // }
 
   .actions {
     margin-top: 15px;

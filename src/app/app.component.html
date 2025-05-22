@@ -9,6 +9,8 @@
       <!-- El botón de renombrar se puede quitar si el panel es la única vía -->
       <!-- <button (click)="onRenameSelected()" [disabled]="!graphCanvas || !graphCanvas.selectedElementId">Renombrar Seleccionado</button> -->
       <button (click)="onDeleteSelected()" [disabled]="!graphCanvas || !graphCanvas.selectedElementId">Eliminar Seleccionado</button>
+      <button (click)="onUndo()" [disabled]="!canUndo()">Deshacer</button>
+      <button (click)="onRedo()" [disabled]="!canRedo()">Rehacer</button>
       
       <div *ngIf="graphCanvas && graphCanvas.selectedElementId" class="selected-info-inline">
         Seleccionado: {{ graphCanvas.selectedElementId }} ({{ graphCanvas.selectedElementType }})

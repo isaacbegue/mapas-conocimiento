@@ -1,7 +1,8 @@
-import { Component, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, ViewChild, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GraphCanvasComponent } from './graph-canvas/graph-canvas.component';
 import { PropertiesPanelComponent } from './properties-panel/properties-panel.component'; // Importa el panel
+import { KnowledgeMapDataService } from './knowledge-map-data.service'; // Import the service
 
 @Component({
   selector: 'app-root',
@@ -19,8 +20,16 @@ export class AppComponent implements AfterViewInit {
 
   @ViewChild('graphCanvasComponent') graphCanvas!: GraphCanvasComponent;
 
+  constructor(
+    public knowledgeMapDataService: KnowledgeMapDataService, // Inyectar el servicio
+    private cdr: ChangeDetectorRef // Inject ChangeDetectorRef
+    ) {}
+
   ngAfterViewInit() {
     // graphCanvas estará disponible aquí
+    // Subscribe to service changes to trigger UI updates for button states if necessary
+    this.knowledgeMapDataService.nodes$.subscribe(() => this.cdr.detectChanges());
+    this.knowledgeMapDataService.edges$.subscribe(() => this.cdr.detectChanges());
   }
 
   onAddConcept(): void {
@@ -72,5 +81,39 @@ export class AppComponent implements AfterViewInit {
     }
     */
    alert("Usa el panel de propiedades para renombrar el elemento seleccionado.");
+  }
+
+  // --- Undo/Redo Methods ---
+  onUndo(): void {
+    this.knowledgeMapDataService.undo();
+    // Consider manually triggering change detection if button states don't update
+    // this.cdr.detectChanges(); // Uncomment if needed
+  }
+
+  onRedo(): void {
+    this.knowledgeMapDataService.redo();
+    // this.cdr.detectChanges(); // Uncomment if needed
+  }
+
+  canUndo(): boolean {
+    return this.knowledgeMapDataService.canUndo();
+  }
+
+  canRedo(): boolean {
+    return this.knowledgeMapDataService.canRedo();
+  }
+
+  // --- Edge Drawing Toggle Methods ---
+  onToggleEdgeDrawing(): void {
+    if (this.graphCanvas) {
+      this.graphCanvas.toggleEdgeDrawingMode();
+      this.cdr.detectChanges(); // Ensure button text/state updates
+    }
+  }
+
+  isEdgeDrawingActive(): boolean {
+    return this.graphCanvas ? this.graphCanvas.isEdgeDrawingEnabled : false;
+    // Default to false if graphCanvas is not yet available, 
+    // though it should be by the time this is relevant.
   }
 }

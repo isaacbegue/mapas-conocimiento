@@ -3,9 +3,12 @@
   padding: 0.5rem;
   background-color: #f0f0f0;
   border-radius: 4px;
+  display: flex;        // Added
+  flex-wrap: wrap;      // Added
+  gap: 8px;             // Added
 
   button {
-    margin-right: 0.5rem;
+    // margin-right: 0.5rem; // Replaced by gap
     margin-bottom: 0.5rem;
     padding: 0.5em 1em;
     border: 1px solid #ccc;
@@ -56,13 +59,29 @@
 }
 
 // Media query para apilar en pantallas pequeñas (opcional pero recomendado)
-@media (max-width: 768px) {
+@media (max-width: 768px) { // Breakpoint can be adjusted as needed
   .main-layout {
-    flex-direction: column;
+    flex-direction: column; // Stack canvas and sidebar
+
+    .canvas-area {
+      min-height: 60vh; // Example: ensure canvas has enough space
+                        // Consider the controls height as well if it's significant
+    }
 
     .sidebar-area {
-      width: 100%; // El sidebar ocupa todo el ancho en móviles
-      margin-top: 20px;
+      width: 100%; // Ensure sidebar takes full width when stacked
+      margin-top: 20px; // Keep the margin from previous version
+      max-height: 40vh; // Example: limit height if it becomes too long
+      overflow-y: auto; // Allow scrolling within the panel if content exceeds height
+      // Potentially add some padding if not already present in properties-panel itself
+      // padding-bottom: 20px; // To avoid scrollbar overlapping last control
+    }
+  }
+
+  .controls {
+    button {
+      // Example of adjusting button padding for smaller screens if needed
+      // padding: 0.4em 0.8em; 
     }
   }
 }
