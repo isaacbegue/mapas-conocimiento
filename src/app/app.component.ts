@@ -2,13 +2,13 @@ import { Component, ViewChild, AfterViewInit, ChangeDetectorRef } from '@angular
 import { CommonModule } from '@angular/common';
 import { GraphCanvasComponent, SelectionChangeEvent } from './graph-canvas/graph-canvas.component';
 import { PropertiesPanelComponent } from './properties-panel/properties-panel.component';
-import { ElementDefinition } from 'cytoscape'; // <<<<<<<<<<<<<<< AÑADIR ESTA IMPORTACIÓN
+import { ElementDefinition } from 'cytoscape';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [
-    CommonModule, 
+    CommonModule,
     GraphCanvasComponent,
     PropertiesPanelComponent
   ],
@@ -22,8 +22,9 @@ export class AppComponent implements AfterViewInit {
 
   panelElementId: string | null = null;
   panelElementType: 'node' | 'edge' | null = null;
+  panelElementFullData: any = null; // To hold the full data of the selected element
 
-  constructor(private cdRef: ChangeDetectorRef) {} 
+  constructor(private cdRef: ChangeDetectorRef) {}
 
   ngAfterViewInit() {
     // console.log('AppComponent AfterViewInit, graphCanvas:', this.graphCanvas);
@@ -32,6 +33,7 @@ export class AppComponent implements AfterViewInit {
   handleSelectionChange(event: SelectionChangeEvent): void {
     this.panelElementId = event.id;
     this.panelElementType = event.type;
+    this.panelElementFullData = event.data; // Store the full data from the event
     // console.log('AppComponent: Selection changed to', event);
   }
 
@@ -54,13 +56,14 @@ export class AppComponent implements AfterViewInit {
           const targetId = prompt("ID del nodo destino:");
           if (!targetId) return;
           const label = prompt("Etiqueta de la relación (opcional):");
-          if (label === null) return;
+          if (label === null) return; // User cancelled prompt
 
           const nodes = this.graphCanvas.knowledgeMapDataService.getCurrentNodes();
-          // El tipado explícito de 'n' como ElementDefinition requiere la importación
-          if (nodes.find((n: ElementDefinition) => n.data.id === sourceId) && 
-              nodes.find((n: ElementDefinition) => n.data.id === targetId)) {
-            this.graphCanvas.knowledgeMapDataService.addEdge(sourceId, targetId, label || '');
+          // Access 'id' using bracket notation for safety, though it's a standard property
+          if (nodes.find((n: ElementDefinition) => n.data && n.data['id'] === sourceId) &&
+              nodes.find((n: ElementDefinition) => n.data && n.data['id'] === targetId)) {
+            // Assuming addEdge in service now takes direction as a 4th param
+            this.graphCanvas.knowledgeMapDataService.addEdge(sourceId, targetId, label || '', 'source-to-target');
           } else {
             alert("Uno o ambos nodos (origen o destino) no existen.");
           }

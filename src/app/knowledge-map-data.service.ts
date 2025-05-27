@@ -2,11 +2,13 @@ import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { ElementDefinition } from 'cytoscape';
 import { BehaviorSubject, Observable, combineLatest, Subscription } from 'rxjs';
-import { debounceTime, skip } from 'rxjs/operators'; // Importar skip y debounceTime
+import { debounceTime, skip } from 'rxjs/operators';
 import { v4 as uuidv4 } from 'uuid';
 
 const LOCAL_STORAGE_NODES_KEY = 'knowledgeMapNodes';
 const LOCAL_STORAGE_EDGES_KEY = 'knowledgeMapEdges';
+
+export type EdgeDirection = 'source-to-target' | 'target-to-source' | 'both' | 'none';
 
 @Injectable({
   providedIn: 'root'
@@ -22,19 +24,18 @@ export class KnowledgeMapDataService {
   ];
 
   private initialEdges: ElementDefinition[] = [
-    { data: { id: 'ab', source: 'a', target: 'b', label: 'Relacionado con' } },
-    { data: { id: 'ac', source: 'a', target: 'c', label: 'Parte de' } },
-    { data: { id: 'bc1', source: 'b', target: 'c1', label: 'Influye en' } },
-    { data: { id: 'cd', source: 'c', target: 'd', label: 'Conecta a' } },
+    { data: { id: 'ab', source: 'a', target: 'b', label: 'Relacionado con', direction: 'source-to-target' } },
+    { data: { id: 'ac', source: 'a', target: 'c', label: 'Parte de', direction: 'source-to-target' } },
+    { data: { id: 'bc1', source: 'b', target: 'c1', label: 'Influye en', direction: 'both' } },
+    { data: { id: 'cd', source: 'c', target: 'd', label: 'Conecta a', direction: 'none' } },
   ];
 
   private nodesSubject: BehaviorSubject<ElementDefinition[]>;
   private edgesSubject: BehaviorSubject<ElementDefinition[]>;
   private persistenceSubscription: Subscription | undefined;
 
-
-  nodes$: Observable<ElementDefinition[]> = new Observable<ElementDefinition[]>(); // Inicialización placeholder
-  edges$: Observable<ElementDefinition[]> = new Observable<ElementDefinition[]>(); // Inicialización placeholder
+  nodes$: Observable<ElementDefinition[]>;
+  edges$: Observable<ElementDefinition[]>;
 
   constructor(@Inject(PLATFORM_ID) private platformId: Object) {
     let storedNodes: ElementDefinition[] = this.initialNodes;
@@ -49,12 +50,39 @@ export class KnowledgeMapDataService {
         const edgesJson = localStorage.getItem(LOCAL_STORAGE_EDGES_KEY);
         if (edgesJson) {
           storedEdges = JSON.parse(edgesJson);
+          storedEdges.forEach(edge => {
+            // Use bracket notation for accessing 'direction'
+            if (edge.data && edge.data['direction'] === undefined) {
+              edge.data['direction'] = 'source-to-target';
+            }
+          });
+        } else {
+           this.initialEdges.forEach(edge => {
+             if (edge.data && edge.data['direction'] === undefined) {
+               edge.data['direction'] = 'source-to-target';
+             }
+           });
+           storedEdges = this.initialEdges;
         }
+
       } catch (e) {
         console.error('Error loading data from localStorage', e);
-        // Se usarán los datos iniciales por defecto
+        this.initialEdges.forEach(edge => {
+          if (edge.data && edge.data['direction'] === undefined) {
+            edge.data['direction'] = 'source-to-target';
+          }
+        });
+        storedEdges = this.initialEdges;
       }
+    } else {
+        this.initialEdges.forEach(edge => {
+          if (edge.data && edge.data['direction'] === undefined) {
+            edge.data['direction'] = 'source-to-target';
+          }
+        });
+        storedEdges = this.initialEdges;
     }
+
 
     this.nodesSubject = new BehaviorSubject<ElementDefinition[]>(storedNodes);
     this.edgesSubject = new BehaviorSubject<ElementDefinition[]>(storedEdges);
@@ -67,14 +95,11 @@ export class KnowledgeMapDataService {
 
   private setupPersistence(): void {
     if (isPlatformBrowser(this.platformId)) {
-      // Usamos combineLatest para reaccionar a cambios en nodos o aristas
-      // skip(1) para evitar guardar el estado inicial que acabamos de cargar o definir
-      // debounceTime para no guardar en cada micro-cambio, sino agruparlos.
       this.persistenceSubscription = combineLatest([
-        this.nodes$.pipe(skip(1)), // Skip el valor inicial al cargar
-        this.edges$.pipe(skip(1))  // Skip el valor inicial al cargar
+        this.nodes$.pipe(skip(1)),
+        this.edges$.pipe(skip(1))
       ]).pipe(
-        debounceTime(500) // Espera 500ms después del último cambio antes de guardar
+        debounceTime(500)
       ).subscribe(([nodes, edges]) => {
         try {
           console.log('Saving to localStorage...');
@@ -87,7 +112,6 @@ export class KnowledgeMapDataService {
     }
   }
 
-
   getCurrentNodes(): ElementDefinition[] {
     return this.nodesSubject.getValue();
   }
@@ -98,31 +122,32 @@ export class KnowledgeMapDataService {
 
   addNode(name: string, parentId?: string): string {
     const newNodeId = uuidv4();
-    const newNode: ElementDefinition = {
-      data: {
-        id: newNodeId,
-        name: name
-      }
+    const newNodeData: { id: string; name: string; parent?: string } = {
+      id: newNodeId,
+      name: name
     };
     if (parentId) {
-      newNode.data.parent = parentId;
+      newNodeData.parent = parentId;
     }
+    const newNode: ElementDefinition = { data: newNodeData };
+
     const currentNodes = this.nodesSubject.getValue();
     this.nodesSubject.next([...currentNodes, newNode]);
     console.log('Node added to service:', newNode);
     return newNodeId;
   }
 
-  addEdge(sourceId: string, targetId: string, label: string): string {
+  addEdge(sourceId: string, targetId: string, label: string, direction: EdgeDirection = 'source-to-target'): string {
     const newEdgeId = uuidv4();
-    const newEdge: ElementDefinition = {
-      data: {
-        id: newEdgeId,
-        source: sourceId,
-        target: targetId,
-        label: label
-      }
+    const newEdgeData: { id: string; source: string; target: string; label: string; direction: EdgeDirection } = {
+      id: newEdgeId,
+      source: sourceId,
+      target: targetId,
+      label: label,
+      direction: direction // Use bracket notation for assignment if it were an index signature, but here it's a defined property
     };
+    const newEdge: ElementDefinition = { data: newEdgeData };
+
     const currentEdges = this.edgesSubject.getValue();
     this.edgesSubject.next([...currentEdges, newEdge]);
     console.log('Edge added to service:', newEdge);
@@ -131,7 +156,8 @@ export class KnowledgeMapDataService {
 
   removeElement(elementId: string): void {
     let currentNodes = this.nodesSubject.getValue();
-    const updatedNodes = currentNodes.filter(node => node.data.id !== elementId);
+    // Ensure data.id is accessed correctly
+    const updatedNodes = currentNodes.filter(node => node.data && node.data['id'] !== elementId);
     if (updatedNodes.length < currentNodes.length) {
       this.nodesSubject.next(updatedNodes);
       console.log('Node removed from service:', elementId);
@@ -140,7 +166,8 @@ export class KnowledgeMapDataService {
     }
 
     let currentEdges = this.edgesSubject.getValue();
-    const updatedEdges = currentEdges.filter(edge => edge.data.id !== elementId);
+    // Ensure data.id is accessed correctly
+    const updatedEdges = currentEdges.filter(edge => edge.data && edge.data['id'] !== elementId);
     if (updatedEdges.length < currentEdges.length) {
       this.edgesSubject.next(updatedEdges);
       console.log('Edge removed from service:', elementId);
@@ -149,7 +176,8 @@ export class KnowledgeMapDataService {
 
   private removeEdgesConnectedToNode(nodeId: string): void {
     const currentEdges = this.edgesSubject.getValue();
-    const updatedEdges = currentEdges.filter(edge => edge.data.source !== nodeId && edge.data.target !== nodeId);
+    // Use bracket notation for source and target
+    const updatedEdges = currentEdges.filter(edge => edge.data && edge.data['source'] !== nodeId && edge.data['target'] !== nodeId);
     if (updatedEdges.length < currentEdges.length) {
         this.edgesSubject.next(updatedEdges);
         console.log('Edges connected to node removed from service:', nodeId);
@@ -158,12 +186,14 @@ export class KnowledgeMapDataService {
 
   updateNodeName(nodeId: string, newName: string): void {
     const currentNodes = this.nodesSubject.getValue();
-    const nodeIndex = currentNodes.findIndex(node => node.data.id === nodeId);
+    // Ensure data.id is accessed correctly
+    const nodeIndex = currentNodes.findIndex(node => node.data && node.data['id'] === nodeId);
     if (nodeIndex > -1) {
+      // Ensure data.name is accessed/assigned correctly
       const updatedNodeData = { ...currentNodes[nodeIndex].data, name: newName };
       const updatedNode = { ...currentNodes[nodeIndex], data: updatedNodeData };
-      
-      const updatedNodesArray = [ // Renombrado para evitar conflicto de nombres
+
+      const updatedNodesArray = [
         ...currentNodes.slice(0, nodeIndex),
         updatedNode,
         ...currentNodes.slice(nodeIndex + 1)
@@ -175,12 +205,14 @@ export class KnowledgeMapDataService {
 
   updateEdgeLabel(edgeId: string, newLabel: string): void {
     const currentEdges = this.edgesSubject.getValue();
-    const edgeIndex = currentEdges.findIndex(edge => edge.data.id === edgeId);
+    // Ensure data.id is accessed correctly
+    const edgeIndex = currentEdges.findIndex(edge => edge.data && edge.data['id'] === edgeId);
     if (edgeIndex > -1) {
+      // Ensure data.label is accessed/assigned correctly, and spread other properties
       const updatedEdgeData = { ...currentEdges[edgeIndex].data, label: newLabel };
       const updatedEdge = { ...currentEdges[edgeIndex], data: updatedEdgeData };
 
-      const updatedEdgesArray = [ // Renombrado para evitar conflicto de nombres
+      const updatedEdgesArray = [
         ...currentEdges.slice(0, edgeIndex),
         updatedEdge,
         ...currentEdges.slice(edgeIndex + 1)
@@ -190,7 +222,25 @@ export class KnowledgeMapDataService {
     }
   }
 
-  // No olvides limpiar la suscripción cuando el servicio se destruya (aunque como 'root' provided, vive con la app)
+  updateEdgeDirection(edgeId: string, newDirection: EdgeDirection): void {
+    const currentEdges = this.edgesSubject.getValue();
+    // Ensure data.id is accessed correctly
+    const edgeIndex = currentEdges.findIndex(edge => edge.data && edge.data['id'] === edgeId);
+    if (edgeIndex > -1) {
+      // Spread existing data and update direction using bracket notation for assignment to the data object
+      const updatedEdgeData = { ...currentEdges[edgeIndex].data, ['direction']: newDirection };
+      const updatedEdge = { ...currentEdges[edgeIndex], data: updatedEdgeData };
+
+      const updatedEdgesArray = [
+        ...currentEdges.slice(0, edgeIndex),
+        updatedEdge,
+        ...currentEdges.slice(edgeIndex + 1)
+      ];
+      this.edgesSubject.next(updatedEdgesArray);
+      console.log('Edge direction updated in service:', edgeId, newDirection);
+    }
+  }
+
   // ngOnDestroy() {
   //   if (this.persistenceSubscription) {
   //     this.persistenceSubscription.unsubscribe();

@@ -40,18 +40,16 @@
 
 .main-layout {
   display: flex;
-  gap: 20px; 
+  gap: 20px;
 
   .canvas-area {
-    flex-grow: 1; 
-    min-width: 0; /* <<<< NUEVA LÍNEA AÑADIDA AQUÍ */
-    /* Esto permite que el contenedor se encoja si su contenido es más grande,
-       en lugar de forzar al contenedor flex padre a expandirse. */
+    flex-grow: 1;
+    min-width: 0; /* Crucial for allowing canvas to shrink if needed */
   }
 
   .sidebar-area {
-    flex-shrink: 0; 
-    width: 300px; 
+    flex-shrink: 0;
+    width: 300px;
   }
 }
 
@@ -60,7 +58,7 @@
     flex-direction: column;
 
     .sidebar-area {
-      width: 100%; 
+      width: 100%;
       margin-top: 20px;
     }
   }

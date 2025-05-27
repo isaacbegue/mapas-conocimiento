@@ -11,6 +11,11 @@
   <div *ngIf="elementType === 'edge'">
     <label for="edgeLabel">Etiqueta:</label>
     <input type="text" id="edgeLabel" [(ngModel)]="editableLabel" (keyup.enter)="onSaveChanges()">
+
+    <label for="edgeDirection">Dirección de la Flecha:</label>
+    <select id="edgeDirection" [(ngModel)]="editableDirection">
+      <option *ngFor="let dir of availableDirections" [value]="dir.value">{{ dir.label }}</option>
+    </select>
   </div>
 
   <div class="actions" *ngIf="selectedElementData">
