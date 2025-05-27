@@ -25,7 +25,7 @@
     }
   }
 
-  .selected-info-inline { // Renombrado para distinguirlo del panel completo
+  .selected-info-inline {
     display: inline-block;
     margin-left: 1rem;
     font-style: italic;
@@ -38,30 +38,29 @@
   }
 }
 
-// Nuevo layout para canvas y sidebar
 .main-layout {
   display: flex;
-  gap: 20px; // Espacio entre el canvas y el sidebar
+  gap: 20px; 
 
   .canvas-area {
-    flex-grow: 1; // El área del canvas toma el espacio disponible
-    // Podrías añadir un min-width si es necesario
+    flex-grow: 1; 
+    min-width: 0; /* <<<< NUEVA LÍNEA AÑADIDA AQUÍ */
+    /* Esto permite que el contenedor se encoja si su contenido es más grande,
+       en lugar de forzar al contenedor flex padre a expandirse. */
   }
 
   .sidebar-area {
-    flex-shrink: 0; // Evita que el sidebar se encoja
-    width: 300px; // Ancho fijo para el sidebar, ajústalo como prefieras
-    // Podrías añadir un max-width si es necesario
+    flex-shrink: 0; 
+    width: 300px; 
   }
 }
 
-// Media query para apilar en pantallas pequeñas (opcional pero recomendado)
 @media (max-width: 768px) {
   .main-layout {
     flex-direction: column;
 
     .sidebar-area {
-      width: 100%; // El sidebar ocupa todo el ancho en móviles
+      width: 100%; 
       margin-top: 20px;
     }
   }

@@ -1,9 +1,19 @@
-import { Component, OnInit, OnDestroy, ElementRef, ViewChild, AfterViewInit, Inject, PLATFORM_ID, Renderer2 } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChild, AfterViewInit, Inject, PLATFORM_ID, Renderer2, Output, EventEmitter } from '@angular/core';
 import { isPlatformBrowser, CommonModule } from '@angular/common';
-import cytoscape, { Core, ElementDefinition, LayoutOptions, NodeSingular, EdgeSingular } from 'cytoscape';
+import cytoscape, { Core, ElementDefinition, LayoutOptions, NodeSingular } from 'cytoscape';
+import edgehandles /*, { EdgeHandlesOptions } // Podemos quitar EdgeHandlesOptions si causa problemas */ from 'cytoscape-edgehandles';
 import { KnowledgeMapDataService } from '../knowledge-map-data.service';
 import { Subscription, combineLatest } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
+
+if (typeof (cytoscape as any).prototype.edgehandles === 'undefined') {
+  cytoscape.use(edgehandles);
+}
+
+export interface SelectionChangeEvent {
+  id: string | null;
+  type: 'node' | 'edge' | null;
+}
 
 @Component({
   selector: 'app-graph-canvas',
@@ -16,11 +26,14 @@ export class GraphCanvasComponent implements OnInit, AfterViewInit, OnDestroy {
 
   @ViewChild('cy') private cyDiv!: ElementRef<HTMLDivElement>;
   private cy!: Core;
+  private eh: any; 
   private dataSubscription!: Subscription;
   private currentLayoutOptions!: LayoutOptions;
 
-  selectedElementId: string | null = null;
-  selectedElementType: 'node' | 'edge' | null = null;
+  private _selectedElementId: string | null = null;
+  private _selectedElementType: 'node' | 'edge' | null = null;
+
+  @Output() selectionChanged = new EventEmitter<SelectionChangeEvent>();
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
@@ -30,18 +43,27 @@ export class GraphCanvasComponent implements OnInit, AfterViewInit, OnDestroy {
   ) { }
 
   ngOnInit(): void {
-    // Initialization and subscription happen in ngAfterViewInit for browser environment
+    // init en ngAfterViewInit
+  }
+
+  public get selectedElementId(): string | null {
+    return this._selectedElementId;
+  }
+
+  public get selectedElementType(): 'node' | 'edge' | null {
+    return this._selectedElementType;
   }
 
   ngAfterViewInit(): void {
     if (isPlatformBrowser(this.platformId)) {
-      console.log('Running in browser (ngAfterViewInit).');
+      console.log('Running in browser (GraphCanvasComponent - ngAfterViewInit).');
       setTimeout(() => {
         this.initializeCytoscape();
+        this.initializeEdgeHandles();
         this.subscribeToDataChanges();
       }, 0);
     } else {
-      console.log('Not running in browser (SSR phase), skipping Cytoscape initialization and data subscription.');
+      console.log('Not running in browser (SSR phase), skipping Cytoscape initialization in GraphCanvasComponent.');
     }
   }
 
@@ -51,39 +73,38 @@ export class GraphCanvasComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.cyDiv && this.cyDiv.nativeElement) {
       containerElement = this.cyDiv.nativeElement;
     } else {
-      console.warn('this.cyDiv.nativeElement not found, trying fallback querySelector.');
       containerElement = this.elementRef.nativeElement.querySelector('#cy');
     }
 
     if (!containerElement) {
-      console.error("Cytoscape container div ABSOLUTELY not found!");
+      console.error("Cytoscape container div not found!");
       return;
     }
 
     this.currentLayoutOptions = {
       name: 'cose',
-      animate: false, // Set to false to avoid layout animation on every data change, true for initial
+      animate: false, 
       padding: 30,
       fit: true,
-      idealEdgeLength: (edge: any) => 100,
+      idealEdgeLength: (_edge: any) => 100,
       nodeOverlap: 20,
       refresh: 20,
       randomize: false,
       componentSpacing: 100,
-      nodeRepulsion: (node: any) => 400000,
-      edgeElasticity: (edge: any) => 100,
+      nodeRepulsion: (_node: any) => 400000,
+      edgeElasticity: (_edge: any) => 100,
       nestingFactor: 5,
       gravity: 80,
       numIter: 1000,
       initialTemp: 200,
       coolingFactor: 0.95,
       minTemp: 1.0
-    } as LayoutOptions;
+    };
 
     this.cy = cytoscape({
       container: containerElement,
-      elements: [], // Elements will be loaded via subscription
-      style: [
+      elements: [],
+      style: [ /* ... estilos (sin cambios) ... */
         {
           selector: 'node',
           style: {
@@ -96,13 +117,13 @@ export class GraphCanvasComponent implements OnInit, AfterViewInit, OnDestroy {
             'text-halign': 'center',
             'shape': 'round-rectangle',
             'border-width': 2,
-            'border-color': 'black' // Default border
+            'border-color': 'black'
           }
         },
         {
           selector: 'node:selected',
           style: {
-            'border-color': 'blue', // Highlight color for selected node
+            'border-color': 'blue',
             'border-width': 3
           }
         },
@@ -136,30 +157,68 @@ export class GraphCanvasComponent implements OnInit, AfterViewInit, OnDestroy {
         {
           selector: 'edge:selected',
           style: {
-            'line-color': 'blue', // Highlight color for selected edge
+            'line-color': 'blue',
             'target-arrow-color': 'blue',
             'width': 4
           }
+        },
+        {
+          selector: '.eh-handle',
+          style: {
+            'background-color': 'red',
+            'width': 12,
+            'height': 12,
+            'shape': 'ellipse',
+            'overlay-opacity': 0,
+            'border-width': 12, 
+            'border-opacity': 0
+          }
+        },
+        {
+          selector: '.eh-hover',
+          style: {
+            'background-color': 'red'
+          }
+        },
+        {
+          selector: '.eh-source',
+          style: {
+            'border-width': 2,
+            'border-color': 'red'
+          }
+        },
+        {
+          selector: '.eh-target',
+          style: {
+            'border-width': 2,
+            'border-color': 'red'
+          }
+        },
+        {
+          selector: '.eh-ghost-edge',
+          style: {
+            'line-color': 'red',
+            'target-arrow-color': 'red',
+            'target-arrow-shape': 'triangle',
+            'opacity': 0.5
+          }
         }
       ],
-      // layout: this.currentLayoutOptions, // Initial layout run is handled in subscribeToDataChanges
     });
 
-    this.cy.on('tap', 'node, edge', (event) => {
+    this.cy.on('tap', 'node, edge', (event: cytoscape.EventObject) => {
       const tappedElement = event.target;
-      this.cy.elements().not(tappedElement).unselect(); // Deselect others
-      tappedElement.select(); // Select the tapped one
-
-      this.selectedElementId = tappedElement.id();
-      this.selectedElementType = tappedElement.isNode() ? 'node' : 'edge';
-      console.log('Elemento seleccionado:', this.selectedElementId, tappedElement.data(), 'Type:', this.selectedElementType);
+      this._selectedElementId = tappedElement.id();
+      this._selectedElementType = tappedElement.isNode() ? 'node' : 'edge';
+      this.selectionChanged.emit({ id: this._selectedElementId, type: this._selectedElementType });
+      console.log('Elemento seleccionado:', this._selectedElementId, tappedElement.data(), 'Type:', this._selectedElementType);
     });
 
-    this.cy.on('tap', (event) => {
-      if (event.target === this.cy) { // Tap on background
-        this.selectedElementId = null;
-        this.selectedElementType = null;
-        this.cy.elements().unselect();
+    this.cy.on('tap', (event: cytoscape.EventObject) => {
+      if (event.target === this.cy) { 
+        this._selectedElementId = null;
+        this._selectedElementType = null;
+        this.selectionChanged.emit({ id: null, type: null });
         console.log('Selección limpiada');
       }
     });
@@ -171,9 +230,37 @@ export class GraphCanvasComponent implements OnInit, AfterViewInit, OnDestroy {
     console.log('Cytoscape instance created.');
   }
 
+  private initializeEdgeHandles(): void {
+    if (!this.cy) return;
+
+    // Declaramos las opciones como 'any' para evitar la comprobación estricta de tipos aquí.
+    // La comprobación de tipos se delega a la biblioteca JS subyacente.
+    const edgeHandlesOptions: any = { // <<<<<<<<<<<<<<< CAMBIO PRINCIPAL AQUÍ
+      snap: true,
+      handleNodes: 'node', 
+      handlePosition: 'middle middle',
+      edgeType: (_sourceNode: NodeSingular, _targetNode: NodeSingular) => 'flat',
+      loopAllowed: (_node: NodeSingular) => false,
+      complete: (sourceNode: NodeSingular, targetNode: NodeSingular, addedEles: any) => {
+        console.log('Edgehandle complete:', sourceNode.id(), targetNode.id());
+        addedEles.remove();
+        const label = prompt('Etiqueta para la nueva relación (opcional):');
+        if (label !== null) {
+          this.knowledgeMapDataService.addEdge(sourceNode.id(), targetNode.id(), label || '');
+        }
+      }
+    };
+    
+    // La llamada a .edgehandles() ya tenía un (as any) para las opciones, que es correcto.
+    this.eh = (this.cy as any).edgehandles(edgeHandlesOptions); 
+
+    console.log('Cytoscape edgehandles initialized.');
+  }
+
+
   private subscribeToDataChanges(): void {
     if (!this.cy) {
-      console.warn('Cytoscape not initialized, re-attempting subscription soon.');
+      console.warn('Cytoscape not initialized in subscribeToDataChanges, re-attempting soon.');
       setTimeout(() => this.subscribeToDataChanges(), 100);
       return;
     }
@@ -181,14 +268,11 @@ export class GraphCanvasComponent implements OnInit, AfterViewInit, OnDestroy {
       this.knowledgeMapDataService.nodes$,
       this.knowledgeMapDataService.edges$
     ]).pipe(
-      debounceTime(50) // Adjust as needed; helps manage frequent updates
-    ).subscribe(([nodes, edges]) => {
+      debounceTime(50)
+    ).subscribe(([nodes, edges]: [ElementDefinition[], ElementDefinition[]]) => {
       if (this.cy && this.currentLayoutOptions) {
         console.log('Data changed, updating Cytoscape graph.');
         const allElements = [...nodes, ...edges];
-
-        // Preserve positions if possible (more advanced, for now, full relayout)
-        // One strategy: store positions before removing, reapply after adding if ID matches.
 
         this.cy.batch(() => {
           this.cy.elements().remove();
@@ -201,43 +285,27 @@ export class GraphCanvasComponent implements OnInit, AfterViewInit, OnDestroy {
         } else {
           console.warn('Could not re-run layout.');
         }
-
-        // Restore selection
-        if (this.selectedElementId) {
-          const elToSelect = this.cy.getElementById(this.selectedElementId);
-          if (elToSelect.length > 0) {
+        
+        if (this._selectedElementId) {
+          const elToSelect = this.cy.getElementById(this._selectedElementId);
+          if (elToSelect.length > 0 && !elToSelect.selected()) { 
             elToSelect.select();
-          } else {
-            this.selectedElementId = null; // Element no longer exists
-            this.selectedElementType = null;
+          } else if (elToSelect.length === 0) {
+            if (this._selectedElementId !== null) { 
+                this._selectedElementId = null;
+                this._selectedElementType = null;
+                this.selectionChanged.emit({ id: null, type: null });
+            }
           }
         }
       }
     });
   }
 
-  // --- Public methods for AppComponent to call ---
   addNewConcept(): void {
     const name = prompt("Nombre del nuevo concepto:");
     if (name) {
-      // For simplicity, new nodes are added at root.
-      // To add as child of selected:
-      // let parentId: string | undefined = undefined;
-      // if (this.selectedElementId && this.selectedElementType === 'node') {
-      //   parentId = this.selectedElementId;
-      // }
-      // const newNodeId = this.knowledgeMapDataService.addNode(name, parentId);
-      const newNodeId = this.knowledgeMapDataService.addNode(name);
-      // Optionally select the new node
-      // setTimeout(() => { // Allow cytoscape to update
-      //   const newNodeCy = this.cy.getElementById(newNodeId);
-      //   if(newNodeCy.length > 0) {
-      //     this.cy.elements().unselect();
-      //     newNodeCy.select();
-      //     this.selectedElementId = newNodeId;
-      //     this.selectedElementType = 'node';
-      //   }
-      // }, 100);
+      this.knowledgeMapDataService.addNode(name);
     }
   }
 
@@ -245,67 +313,47 @@ export class GraphCanvasComponent implements OnInit, AfterViewInit, OnDestroy {
     let sourceId: string | null = null;
     let targetId: string | null = null;
 
-    if (this.selectedElementId && this.selectedElementType === 'node') {
-        sourceId = this.selectedElementId;
+    if (this._selectedElementId && this._selectedElementType === 'node') {
+        sourceId = this._selectedElementId;
         targetId = prompt(`ID del nodo destino (origen es ${sourceId}):`);
     } else {
-        sourceId = prompt("ID del nodo origen:");
-        if (sourceId) {
-            targetId = prompt("ID del nodo destino:");
-        }
+        alert("Por favor, selecciona un nodo de origen primero para usar esta función.");
+        return;
     }
 
     if (sourceId && targetId) {
       const label = prompt("Etiqueta de la relación (opcional):");
-      if (label !== null) { // User didn't cancel label prompt
+      if (label !== null) {
         const nodes = this.knowledgeMapDataService.getCurrentNodes();
-        if (nodes.find(n => n.data.id === sourceId) && nodes.find(n => n.data.id === targetId)) {
-          this.knowledgeMapDataService.addEdge(sourceId, targetId, label || ''); // Pass empty string if label is empty
+        if (nodes.find((n: ElementDefinition) => n.data.id === sourceId) && 
+            nodes.find((n: ElementDefinition) => n.data.id === targetId)) {
+          this.knowledgeMapDataService.addEdge(sourceId, targetId, label || '');
         } else {
           alert("Uno o ambos nodos (origen o destino) no existen.");
         }
       }
-    } else if (sourceId && !targetId && targetId !== null) {
+    } else if (sourceId && !targetId && targetId !== null) { 
         alert("Se requiere un nodo destino.");
-    } else if (!sourceId && sourceId !== null){
-        alert("Se requiere un nodo origen.");
     }
   }
 
   deleteSelected(): void {
-    if (this.selectedElementId) {
-      const el = this.cy.getElementById(this.selectedElementId);
-      const elData = el.data();
-      const elementName = elData.name || elData.label || this.selectedElementId;
-      if (confirm(`¿Seguro que quieres eliminar el elemento "${elementName}"?`)) {
-        this.knowledgeMapDataService.removeElement(this.selectedElementId);
-        this.selectedElementId = null;
-        this.selectedElementType = null;
+    if (this._selectedElementId) {
+      const el = this.cy.getElementById(this._selectedElementId);
+      if (el.length > 0) { 
+        const elData = el.data();
+        const elementName = elData.name || elData.label || this._selectedElementId;
+        if (confirm(`¿Seguro que quieres eliminar el elemento "${elementName}"?`)) {
+          this.knowledgeMapDataService.removeElement(this._selectedElementId);
+        }
+      } else {
+         alert("El elemento seleccionado ya no existe en el grafo.");
+         this._selectedElementId = null;
+         this._selectedElementType = null;
+         this.selectionChanged.emit({ id: null, type: null });
       }
     } else {
       alert("No hay ningún elemento seleccionado.");
-    }
-  }
-
-  renameSelectedElement(): void {
-    if (!this.selectedElementId) {
-      alert("Por favor, selecciona un elemento para renombrar.");
-      return;
-    }
-
-    const element = this.cy.getElementById(this.selectedElementId);
-    if (this.selectedElementType === 'node') {
-      const currentName = element.data('name') || '';
-      const newName = prompt("Nuevo nombre para el concepto:", currentName);
-      if (newName !== null && newName !== currentName) {
-        this.knowledgeMapDataService.updateNodeName(this.selectedElementId, newName);
-      }
-    } else if (this.selectedElementType === 'edge') {
-      const currentLabel = element.data('label') || '';
-      const newLabel = prompt("Nueva etiqueta para la relación:", currentLabel);
-      if (newLabel !== null && newLabel !== currentLabel) {
-        this.knowledgeMapDataService.updateEdgeLabel(this.selectedElementId, newLabel);
-      }
     }
   }
 
@@ -313,6 +361,10 @@ export class GraphCanvasComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.dataSubscription) {
       this.dataSubscription.unsubscribe();
       console.log('Data subscription unsubscribed.');
+    }
+    if (isPlatformBrowser(this.platformId) && this.eh && typeof this.eh.destroy === 'function') {
+      this.eh.destroy(); 
+      console.log('Cytoscape edgehandles destroyed.');
     }
     if (isPlatformBrowser(this.platformId) && this.cy) {
       this.cy.destroy();

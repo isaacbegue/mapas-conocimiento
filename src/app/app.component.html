@@ -4,24 +4,32 @@
   <div class="canvas-area">
     <div class="controls">
       <button (click)="onAddConcept()">Añadir Concepto</button>
+      <!-- 
+        Para el [disabled] del botón "Añadir Relación desde Seleccionado", 
+        seguimos accediendo a las propiedades públicas de graphCanvas.
+        Esto es para una respuesta visual inmediata del botón.
+        Si esto sigue causando problemas, podríamos hacer que graphCanvas emita
+        un booleano "isNodeSelected" o similar.
+      -->
       <button (click)="onAddRelation()" [disabled]="!graphCanvas || !(graphCanvas.selectedElementId && graphCanvas.selectedElementType === 'node')">Añadir Relación desde Seleccionado</button>
       <button (click)="onAddRelationAny()">Añadir Relación (IDs)</button>
-      <!-- El botón de renombrar se puede quitar si el panel es la única vía -->
-      <!-- <button (click)="onRenameSelected()" [disabled]="!graphCanvas || !graphCanvas.selectedElementId">Renombrar Seleccionado</button> -->
       <button (click)="onDeleteSelected()" [disabled]="!graphCanvas || !graphCanvas.selectedElementId">Eliminar Seleccionado</button>
       
-      <div *ngIf="graphCanvas && graphCanvas.selectedElementId" class="selected-info-inline">
-        Seleccionado: {{ graphCanvas.selectedElementId }} ({{ graphCanvas.selectedElementType }})
+      <!-- Usamos las propiedades de AppComponent (panelElementId) para la información en línea -->
+      <div *ngIf="panelElementId" class="selected-info-inline">
+        Seleccionado: {{ panelElementId }} ({{ panelElementType }})
       </div>
     </div>
     
-    <app-graph-canvas #graphCanvasComponent></app-graph-canvas>
+    <!-- Escuchar el evento selectionChanged y llamar al manejador en AppComponent -->
+    <app-graph-canvas #graphCanvasComponent (selectionChanged)="handleSelectionChange($event)"></app-graph-canvas>
   </div>
 
   <div class="sidebar-area">
+    <!-- Pasar las propiedades de AppComponent al panel -->
     <app-properties-panel
-      [elementId]="graphCanvas?.selectedElementId ?? null"
-      [elementType]="graphCanvas?.selectedElementType ?? null">
+      [elementId]="panelElementId"
+      [elementType]="panelElementType">
     </app-properties-panel>
   </div>
 </div>
